@@ -11,7 +11,7 @@ function track!(σx, σy, σz, temp1, bbSC::BunchedBeam, factorSC::Float64)
 
         Bassetti_Erskine!(fieldvec_thread[Threads.threadid()], bbSC.dist.x[j], bbSC.dist.y[j], σx, σy)
         
-        # gaussian function for particle distribution, lambda_z  (bbSC.dist.z[j]= temp1[j])
+        # gaussian function for particle distribution, lambda_z
         temp1[j] = 1.0/sqrt(2*π)/σz*exp((-0.5)*bbSC.dist.z[j]^2/σz^2)
 
         # delta p_/p_0

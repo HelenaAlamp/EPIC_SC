@@ -84,11 +84,7 @@ begin
 
 end
 
-
-####### record beamsize for 1k turns start - no SC applied ########
-#σx = Vector{Float64}(undef, nSC)
-#σy = Vector{Float64}(undef, nSC)
-
+# record beam size under SC effects at each nSC location
 for i in 1:turns_rec
 
     track!(pbeam, oneturn)
@@ -107,7 +103,7 @@ for i in 1:turns_rec
 end
 
 
-# records SC bs effects
+# record in file previous SC beam size
 open("pbeam_records_sx_SC_Sympl_TEST.jls", "w") do f
     serialize(f, sc_BE.sigma_x_SC)
 end
@@ -119,14 +115,14 @@ end
 plot(sc_BE.sigma_x_SC, label = L"$σ_x$", xlabel="# Turns", )
 plot(sc_BE.sigma_y_SC, label = L"$σ_y$", xlabel="# Turns", )
 
-
+# average beam size for next turn
 for j in 1:nSC
     sc_BE.sigma_x_SC[j] = mean(sc_BE.sigma_x_SC[:,j])
     sc_BE.sigma_y_SC[j] = mean(sc_BE.sigma_y_SC[:,j])
 end
 
 
-############## start tracking first 1k turns replacing 1kturns beamsize records #################
+############## start tracking  #################
 
 for i in 1:turns
     track!(pbeam, oneturn)

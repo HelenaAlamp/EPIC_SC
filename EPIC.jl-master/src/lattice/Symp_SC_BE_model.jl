@@ -85,7 +85,6 @@ end
 
 
 function SC_kick!(SC::SC_lens, bbSC::BunchedBeam)
-    factorSC = 2*bbSC.particle.classrad0/bbSC.beta^2/bbSC.gamma^3*bbSC.num_particle*SC.ds
     
     get_emittance!(bbSC)
     betax = SC.optics.optics_x.beta
@@ -94,7 +93,8 @@ function SC_kick!(SC::SC_lens, bbSC::BunchedBeam)
     σz = bbSC.beamsize[5]
     σx = bbSC.beamsize[1] #sqrt(bbSC.emittance[1] * betax)  # beamsize x at SC_point
     σy = bbSC.beamsize[3] #sqrt(bbSC.emittance[2] * betay) # beamsize y at SC_point
-    
+
+    factorSC = 2*bbSC.particle.classrad0/σz/bbSC.beta^2/bbSC.gamma^3*bbSC.num_particle*SC.ds
     track!(σx, σy, σz, bbSC.temp1, bbSC, factorSC)
     
 end

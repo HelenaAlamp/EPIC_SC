@@ -65,7 +65,7 @@ begin
     
     # generate the bunch
     pbeam = BunchedBeam(PROTON, 0.25e11, 1e9, num_particles, [emix, emiy, 2.3e-5])
-    opbeam = optics4DUC(betax[5], alphax[5], betay[5], alphay[5]) #calcolato beta da sigma e emi? - corrisponde a Q3
+    opbeam = optics4DUC(betax[5], alphax[5], betay[5], alphay[5])
     mainRF = AccelCavity(100e6, 85e3, 1, 0.0) 
     αc=0.0
     lmap = LongitudinalRFMap(αc, mainRF)
@@ -77,7 +77,7 @@ begin
     opQ1 = optics4DUC(betax[2], alphax[2], betay[2], alphay[2])
     opD2 = optics4DUC(betax[3], alphax[3], betay[3], alphay[3])
     opQ2 = optics4DUC(betax[4], alphax[4], betay[4], alphay[4])
-    opD3 = optics4DUC(betax[5], alphax[5], betay[5], alphay[5]) #ritorna uguale a opbeam
+    opD3 = optics4DUC(betax[5], alphax[5], betay[5], alphay[5]) # =opbeam
     
     # single element phase advance
     Qx_D1 = dmux[1]
@@ -129,7 +129,7 @@ begin
     ds_Q2 = l_Q2/nsc_Q2
     ds_D3 = l_D3/nsc_D3"""
 
-    opSC = optics4DUC(1.0, 0.0, 1.0, 0.0) # non mi serve in single element
+    opSC = optics4DUC(1.0, 0.0, 1.0, 0.0) # no need
 
     sc_D1 = SC_lens(opSC, l_D1, nsc_D1, turns)
     sc_Q1 = SC_lens(opSC, l_Q1, nsc_Q1, turns)

@@ -30,31 +30,15 @@ end
 """
 # symmetric fodo cell
 # on JuTrack:
-initial beam emittance
-5.510533251461403e-7     
-5.53816191562185e-7      
-0.0 
-
 initial beam size
 0.0006550846646644346
 0.001503740507204768
 0.0006566409601378707
 0.0015094494868860952
 
-emix, emiy, emiz = 5.5105e-7, 5.5381e-7, 2.3e-5 # symmetric fodo cell
-
-betax = 0.0006550846646644346^2/5.510533251461403e-7 = 0.7787556998493879
-betay = 0.7785567794876761
-
 eta_p: -0.8803545114201268
 Qs: 0.009977004359703896
 delta_max: 0.04281724330933424 with 2.3e-5 seV and AccelCavity(100e6, 85e3, 1, 0.0), 1GeV
-"""
-
-"""
-no-symmetric fodo cell - final betax,y
-emix = 0.0006550846646644346^2/0.81387 = 
-emiy = 0.0006566409601378707^2/0.71392 = 
 """
 
 # Read the data from JuTrack
@@ -174,7 +158,7 @@ begin
     delta_pz = zeros(Float64, num_particles)
 
     records = StructArray{record}(undef, turns)
-
+    lumi = 0.0
     SC = true
 
 end

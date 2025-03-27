@@ -55,22 +55,22 @@ function track!(σx, σy, σz, temp1, bbSC::BunchedBeam, factorSC::Float64)
     dpx_dz = zeros(length(bbSC.dist.x))
     dpy_dz = zeros(length(bbSC.dist.x))
 
-    dEx_dx = zeros(length(bbSC.dist.x))
+    """dEx_dx = zeros(length(bbSC.dist.x))
     dEx_dy = zeros(length(bbSC.dist.x))
     dEy_dx = zeros(length(bbSC.dist.x))
-    dEy_dy = zeros(length(bbSC.dist.x))
+    dEy_dy = zeros(length(bbSC.dist.x))"""
 
 
     fieldvec_thread=[MVector{3}(0.0, 0.0, 0.0)  for j = 1:Threads.nthreads()]
     @inbounds Threads.@threads :static for j in eachindex(bbSC.dist.x)
 
     
-        dEx_dx[j], dEx_dy[j], dEy_dx[j], dEy_dy[j] = parameters_derivatives(bbSC.dist.x[j], bbSC.dist.y[j], σx, σy)
+        #dEx_dx[j], dEx_dy[j], dEy_dx[j], dEy_dy[j] = parameters_derivatives(bbSC.dist.x[j], bbSC.dist.y[j], σx, σy)
 
         Bassetti_Erskine!(fieldvec_thread[Threads.threadid()], bbSC.dist.x[j], bbSC.dist.y[j], σx, σy)
 
         # gaussian function for particle distribution, lambda_z
-        temp1[j] = 1.0/sqrt(2*π)/σz*exp((-0.5)*bbSC.dist.z[j]^2/σz^2)
+        temp1[j] = 1.0#/sqrt(2*π)/σz*exp((-0.5)*bbSC.dist.z[j]^2/σz^2)
 
         dpx_dz[j] = factorSC*temp1[j] *fieldvec_thread[Threads.threadid()][1]* bbSC.dist.z[j]/σz^2
         dpy_dz[j] = factorSC*temp1[j] *fieldvec_thread[Threads.threadid()][2]* bbSC.dist.z[j]/σz^2
@@ -85,14 +85,23 @@ function track!(σx, σy, σz, temp1, bbSC::BunchedBeam, factorSC::Float64)
         bbSC.dist.px[j] += factorSC* temp1[j]* fieldvec_thread[Threads.threadid()][1]
         bbSC.dist.py[j] += factorSC* temp1[j]* fieldvec_thread[Threads.threadid()][2]
 
-        bbSC.dist.dp[j] += dpx_dz[j]*bbSC.dist.x[j] + dpy_dz[j]*bbSC.dist.y[j]
+        #bbSC.dist.dp[j] += dpx_dz[j]*bbSC.dist.x[j] + dpy_dz[j]*bbSC.dist.y[j]
 
-        #=
+        """
+        println("dpx_dz is:", dpx_dz[1])
+        println("dpy_dz is:", dpy_dz[1])
+        println("dp is ", bbSC.dist.dp[1])
+        println("factorSC ", factorSC)
+        """
+        """
         println("dpx_dz is:", dpx_dz)
         println("dpy_dz is:", dpy_dz)
         println("dEx_dx:", dEx_dx, "\n", "dEx_dy:", dEx_dy, "\n", "dEy_dx:", dEy_dx, "\n", "dEy_dy:", dEy_dy, "\n")
-        println("temp1:", temp1)=#
-
+        println("temp1:", temp1)
+        """
+        #perveance = factorSC*temp1[1]
+        #println("perveance:", perveance)
+        
     end
 end
 
@@ -101,16 +110,16 @@ end
 #SC kick for the first turn, usefull for collecting beamsize at each j SC-location
 function SC_kick!(SC::SC_lens, bbSC::BunchedBeam)
     
-    factorSC = 2*bbSC.particle.classrad0/bbSC.beta^2/bbSC.gamma^3*bbSC.num_particle*SC.ds
-    
     get_emittance!(bbSC)
     σx = bbSC.beamsize[1]
     σy = bbSC.beamsize[3] #sqrt(bbSC.emittance[2] * betay) # beamsize y at SC_point
     σz = bbSC.beamsize[5]
 
+    factorSC = 2*bbSC.particle.classrad0/bbSC.beta^2/bbSC.gamma^3*bbSC.num_particle*SC.ds
     track!(σx, σy, σz, bbSC.temp1, bbSC, factorSC)
-    
+ 
     return σx, σy
+       
     
 end
 
@@ -118,8 +127,6 @@ end
 #function for next k-turns
 function SC_kick!(SC::SC_lens, bbSC::BunchedBeam, w::Float64, sx, sy)
     
-    factorSC = 2*bbSC.particle.classrad0/bbSC.beta^2/bbSC.gamma^3*bbSC.num_particle*SC.ds
-
     get_emittance!(bbSC)
 
     σx_NEW = sx * w + bbSC.beamsize[1] * (1-w)
@@ -127,14 +134,57 @@ function SC_kick!(SC::SC_lens, bbSC::BunchedBeam, w::Float64, sx, sy)
 
     σz = bbSC.beamsize[5] #sqrt(bbSC.emittance[2] * betay) # beamsize y at SC_point
 
+    factorSC = 2*bbSC.particle.classrad0/bbSC.beta^2/bbSC.gamma^3*bbSC.num_particle*SC.ds
     track!(σx_NEW, σy_NEW, σz, bbSC.temp1, bbSC, factorSC)
 
     return σx_NEW, σy_NEW
-    
+
 end
 
-#=
-println("Before track! σx: ", σx_NEW, " σy: ", σy_NEW, " σz: ", σz)
-track!(σx_NEW, σy_NEW, σz, bbSC.temp1, bbSC, factorSC)
-println("After track! σx: ", σx_NEW, " σy: ", σy_NEW, " σz: ", σz)
-=#
+
+# use for single element tracking - nsc \= 1
+function sc_in_element(beam::BunchedBeam, optics_beam, optics_ele, ele_SC::SC_lens, nsc::Int64, 
+            phix_adv_ele, phiy_adv_ele)
+
+    for j in 1:nsc 
+        TM1[j] = TransferMap4D(optics_beam, optics_ele, phix_adv_ele[j], phiy_adv_ele[j])
+        track!(beam, TM1[j])
+        
+        SC_kick!(ele_SC, beam)
+        
+        TM1_inv[j] = Inverse_TransferMap4D(optics_beam, optics_ele, phix_adv_ele[j], phiy_adv_ele[j])
+        track!(beam, TM1_inv[j])
+    end
+end
+
+# use for single element tracking - nsc = 1
+function sc_in_element(beam::BunchedBeam, optics_beam, optics_ele, 
+            ele_SC::SC_lens, phix_adv_ele, phiy_adv_ele)
+
+    TM1 = TransferMap4D(optics_beam, optics_ele, phix_adv_ele, phiy_adv_ele)
+    track!(beam, TM1)
+    
+    SC_kick!(ele_SC, beam)
+    
+    TM1_inv = Inverse_TransferMap4D(optics_beam, optics_ele, phix_adv_ele, phiy_adv_ele)
+    track!(beam, TM1_inv)
+
+end
+
+# From one element to another for tracking code
+###### SC tracking #####
+"""
+if SC == true
+    track!(pbeam, TM_D1)
+    #SC_kick!(sc_D1, pbeam)
+    track!(pbeam, TM_Q1)
+    #SC_kick!(sc_Q1, pbeam)
+    track!(pbeam, TM_D2)
+    #SC_kick!(sc_D2, pbeam)
+    track!(pbeam, TM_Q2)
+    #SC_kick!(sc_Q2, pbeam)
+    track!(pbeam, TM_D3)
+    #SC_kick!(sc_D3, pbeam)  
+end
+"""
+

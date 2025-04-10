@@ -58,8 +58,8 @@ function track!(σx, σy, σz, temp1, bbSC::BunchedBeam, factorSC::Float64)
     """dEx_dx = zeros(length(bbSC.dist.x))
     dEx_dy = zeros(length(bbSC.dist.x))
     dEy_dx = zeros(length(bbSC.dist.x))
-    dEy_dy = zeros(length(bbSC.dist.x))"""
-
+    dEy_dy = zeros(length(bbSC.dist.x))
+    """
 
     fieldvec_thread=[MVector{3}(0.0, 0.0, 0.0)  for j = 1:Threads.nthreads()]
     @inbounds Threads.@threads :static for j in eachindex(bbSC.dist.x)
@@ -119,7 +119,6 @@ function SC_kick!(SC::SC_lens, bbSC::BunchedBeam)
     track!(σx, σy, σz, bbSC.temp1, bbSC, factorSC)
  
     return σx, σy
-       
     
 end
 
@@ -134,7 +133,7 @@ function SC_kick!(SC::SC_lens, bbSC::BunchedBeam, w::Float64, sx, sy)
 
     σz = bbSC.beamsize[5] #sqrt(bbSC.emittance[2] * betay) # beamsize y at SC_point
 
-    factorSC = 2*bbSC.particle.classrad0/bbSC.beta^2/bbSC.gamma^3*bbSC.num_particle*SC.ds
+    factorSC =  2*bbSC.particle.classrad0/bbSC.beta^2/bbSC.gamma^3*bbSC.num_particle*SC.ds
     track!(σx_NEW, σy_NEW, σz, bbSC.temp1, bbSC, factorSC)
 
     return σx_NEW, σy_NEW
@@ -142,49 +141,112 @@ function SC_kick!(SC::SC_lens, bbSC::BunchedBeam, w::Float64, sx, sy)
 end
 
 
-# use for single element tracking - nsc \= 1
-function sc_in_element(beam::BunchedBeam, optics_beam, optics_ele, ele_SC::SC_lens, nsc::Int64, 
-            phix_adv_ele, phiy_adv_ele)
+function sc_in_element(beam::BunchedBeam, optics_beam, optics_ele, ele_SC::SC_lens,
+    phix_adv_ele, phiy_adv_ele, last::String)
 
-    for j in 1:nsc 
-        TM1[j] = TransferMap4D(optics_beam, optics_ele, phix_adv_ele[j], phiy_adv_ele[j])
-        track!(beam, TM1[j])
-        
-        SC_kick!(ele_SC, beam)
-        
-        TM1_inv[j] = Inverse_TransferMap4D(optics_beam, optics_ele, phix_adv_ele[j], phiy_adv_ele[j])
-        track!(beam, TM1_inv[j])
+    TM1 = Array{TransferMap4D, 1}(undef, ele_SC.nSC)
+    TM1_inv = Array{Inverse_TransferMap4D, 1}(undef, ele_SC.nSC)
+
+    if last == "N"
+        for j in 1:ele_SC.nSC
+            TM1[j] = TransferMap4D(optics_beam, optics_ele, phix_adv_ele[j], phiy_adv_ele[j])
+            track!(beam, TM1[j])
+    
+            SC_kick!(ele_SC, beam)
+    
+            TM1_inv[j] = Inverse_TransferMap4D(optics_beam, optics_ele, phix_adv_ele[j], phiy_adv_ele[j])
+            track!(beam, TM1_inv[j])
+        end    
+    end
+    
+    if last == "Y"
+
+        for j in 1:ele_SC.nSC
+            if j < ele_SC.nSC
+                TM1[j] = TransferMap4D(optics_beam, optics_ele, phix_adv_ele[j], phiy_adv_ele[j])
+                track!(beam, TM1[j])
+
+                SC_kick!(ele_SC, beam)
+
+                TM1_inv[j] = Inverse_TransferMap4D(optics_beam, optics_ele, phix_adv_ele[j], phiy_adv_ele[j])
+                track!(beam, TM1_inv[j])
+            end
+            if j==ele_SC.nSC
+                TM1[j] = TransferMap4D(optics_beam, optics_ele, phix_adv_ele[j], phiy_adv_ele[j])
+                track!(beam, TM1[j])
+                SC_kick!(ele_SC, beam)
+            end
+        end
     end
 end
 
-# use for single element tracking - nsc = 1
-function sc_in_element(beam::BunchedBeam, optics_beam, optics_ele, 
-            ele_SC::SC_lens, phix_adv_ele, phiy_adv_ele)
 
-    TM1 = TransferMap4D(optics_beam, optics_ele, phix_adv_ele, phiy_adv_ele)
-    track!(beam, TM1)
+function sc_in_element(beam::BunchedBeam, optics_beam, optics_ele, ele_SC::SC_lens, phix_adv_ele, phiy_adv_ele, last::String, single::String)
+
+    if last == "N"
+
+        TM1 = TransferMap4D(optics_beam, optics_ele, phix_adv_ele, phiy_adv_ele)
+        track!(beam, TM1)
     
-    SC_kick!(ele_SC, beam)
+        SC_kick!(ele_SC, beam)
     
-    TM1_inv = Inverse_TransferMap4D(optics_beam, optics_ele, phix_adv_ele, phiy_adv_ele)
-    track!(beam, TM1_inv)
+        TM1_inv = Inverse_TransferMap4D(optics_beam, optics_ele, phix_adv_ele, phiy_adv_ele)
+        track!(beam, TM1_inv)
+    
+    end
 
+    if last == "Y"
+
+        TM1 = TransferMap4D(optics_beam, optics_ele, phix_adv_ele, phiy_adv_ele)
+        track!(beam, TM1)
+    
+        SC_kick!(ele_SC, beam) 
+
+    end
 end
-
-# From one element to another for tracking code
-###### SC tracking #####
+    
 """
-if SC == true
-    track!(pbeam, TM_D1)
-    #SC_kick!(sc_D1, pbeam)
-    track!(pbeam, TM_Q1)
-    #SC_kick!(sc_Q1, pbeam)
-    track!(pbeam, TM_D2)
-    #SC_kick!(sc_D2, pbeam)
-    track!(pbeam, TM_Q2)
-    #SC_kick!(sc_Q2, pbeam)
-    track!(pbeam, TM_D3)
-    #SC_kick!(sc_D3, pbeam)  
+#da modificareeeeee per comprimere tutto quii
+function sc_in_element(beam::BunchedBeam, optics_beam, betax::Vector, betay::Vector, 
+        alphax::Vector, alphay::Vector, ele_SC::SC_lens, phix_adv_ele, phiy_adv_ele, last::String)
+
+    TM1 = Array{TransferMap4D, 1}(undef, ele_SC.nSC)
+    TM1_inv = Array{Inverse_TransferMap4D, 1}(undef, ele_SC.nSC)
+    
+    optics_ele = optics4DUC(betax[j], alphax[j], betay[j], alphay[j])
+
+    if last == "N"
+        for j in 1:ele_SC.nSC
+            TM1[j] = TransferMap4D(optics_beam, optics_ele[j], phix_adv_ele[j], phiy_adv_ele[j])
+            track!(beam, TM1[j])
+    
+            SC_kick!(ele_SC, beam)
+    
+            TM1_inv[j] = Inverse_TransferMap4D(optics_beam, optics_ele[j], phix_adv_ele[j], phiy_adv_ele[j])
+            track!(beam, TM1_inv[j])
+        end
+        
+
+    end
+    
+    if last == "Y"
+
+        for j in 1:ele_SC.nSC
+            if j < ele_SC.nSC
+                TM1[j] = TransferMap4D(optics_beam, optics_ele, phix_adv_ele[j], phiy_adv_ele[j])
+                track!(beam, TM1[j])
+
+                SC_kick!(ele_SC, beam)
+
+                TM1_inv[j] = Inverse_TransferMap4D(optics_beam, optics_ele, phix_adv_ele[j], phiy_adv_ele[j])
+                track!(beam, TM1_inv[j])
+            end
+            if j==ele_SC.nSC
+                TM1[j] = TransferMap4D(optics_beam, optics_ele, phix_adv_ele[j], phiy_adv_ele[j])
+                track!(beam, TM1[j])
+                SC_kick!(ele_SC, beam)
+            end
+        end
+    end
 end
 """
-
